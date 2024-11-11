@@ -3,144 +3,241 @@ import random
 
 
 
+
+
+populationsize = 50
+maxRounds = 5000
+crossoverProbability = 0.8
+mutationProbability = 0.05
+
+
+
 ########################## Read Data####################
 
 
 def readInstances(instanceFile: str):
     instanceSet = open(instanceFile, "r")
-    itemsLen = int(instanceSet.readline())
+    instancelen = int(instanceSet.readline())
     binSize = int(instanceSet.readline())
-    itemsIndex = []
+    itemsindex = []
     items = {}
-    for i in range(itemsLen):
+    for i in range(instancelen):
         items[i] = int(instanceSet.readline())
-        itemsIndex.append(i)
+        itemsindex.append(i)
 
-    return itemsLen, binSize, items, itemsIndex
+    return instancelen, binSize, items, itemsindex
 
-
-def initialize():
-    random.shuffle()
-    return
-
-
-def fitness(individual, items, bin_capacity):
-    
-    num_bins_used = 0
-    unique_bins = np.unique(individual)
-    
-    for bin_id in unique_bins:
-        
-        total_weight = sum([items[i] for i in range(len(items)) if individual[i] == bin_id])
-        if total_weight > bin_capacity:
-            return float('inf') 
-        num_bins_used += 1
-    
-    return num_bins_used  
-
-# population = initialize_population(5, items, bin_capacity)
-# for i, individual in enumerate(population):
-#     print(f"Individual {i+1}: {individual} - Fitness: {fitness(individual, items, bin_capacity)}")
-
-
-
-def tournament_selection(population, fitness, tournament_size=3):
-    selected = []
-    for _ in range(len(population)):
-        competitors = np.random.choice(population, tournament_size)
-        selected.append(max(competitors, key=lambda ind: fitness(ind)))
-    return selected
-
-            ############cycle crossover#########
-
-
-def cycle_crossover(parent1, parent2):
-    """ Perform Cycle Crossover (CX) between two parent permutations. """
-    
-    # Initialize offspring with None values
-    size = len(parent1)
-    offspring1, offspring2 = [None]*size, [None]*size
-    
-    # Helper function to find cycles
-    def create_cycle(p1, p2):
-        cycle = []
-        index = 0
-        while index not in cycle:
-            cycle.append(index)
-            index = p1.index(p2[index])
-        return cycle
-    
-    # Step 1: Find cycle starting from position 0
-    cycle = create_cycle(parent1, parent2)
-    
-    # Step 2: Copy the cycle elements from parent1 to offspring1, and parent2 to offspring2
-    for i in cycle:
-        offspring1[i] = parent1[i]
-        offspring2[i] = parent2[i]
-    
-    # Step 3: Fill in the remaining positions with the opposite parent's genes
-    for i in range(size):
-        if offspring1[i] is None:
-            offspring1[i] = parent2[i]
-        if offspring2[i] is None:
-            offspring2[i] = parent1[i]
-    
-    return offspring1, offspring2
-
-# Example usage
-parent1 = [1, 2, 3, 4, 5, 6, 7, 8]
-parent2 = [4, 1, 2, 8, 7, 6, 5, 3]
-
-offspring1, offspring2 = cycle_crossover(parent1, parent2)
-print("Parent 1:", parent1)
-print("Parent 2:", parent2)
-print("Offspring 1:", offspring1)
-print("Offspring 2:", offspring2)
-
-
-                ########order crossover#########
-
-
-import numpy as np
-
-def ox_crossover(parent1, parent2):
-    """ Perform Order Crossover (OX) between two parent permutations. """
-    
-    # Length of the parent chromosomes
-    size = len(parent1)
-    
-    # Initialize offspring with None values
-    offspring1, offspring2 = [None]*size, [None]*size
-    
-    # Randomly select two crossover points
-    cx_point1, cx_point2 = sorted(np.random.choice(range(size), 2, replace=False))
-    
-    # Step 1: Copy the segment between crossover points
-    offspring1[cx_point1:cx_point2] = parent1[cx_point1:cx_point2]
-    offspring2[cx_point1:cx_point2] = parent2[cx_point1:cx_point2]
-    
-    # Step 2: Fill the remaining positions from the other parent in order
-    def fill_offspring(offspring, parent, cx_point1, cx_point2):
-        current_position = cx_point2 % size
-        for gene in parent:
-            if gene not in offspring:
-                offspring[current_position] = gene
-                current_position = (current_position + 1) % size
+                ############fitnes###########
                 
-    # Fill offspring1 with remaining genes from parent2
-    fill_offspring(offspring1, parent2, cx_point1, cx_point2)
-    # Fill offspring2 with remaining genes from parent1
-    fill_offspring(offspring2, parent1, cx_point1, cx_point2)
+def bin_count(itemsindex: list, items: object):
+    bins = 1
+    bin_capacity = 0
+    fitness = 0
     
-    return offspring1, offspring2
+    for i in itemsindex:
+        if (bin_capacity + items[i] > binSize):
+            fitness += fitnessbin(bin_capacity)
+            bins += 1
+            bin_capacity = items[i]
+            
+        else:
+            bin_capacity += items[i]
+            
+        fitness += fitnessbin(bin_capacity)
+        
+    return fitness, bins
 
-# Example usage
-parent1 = [1, 2, 3, 4, 5, 6, 7, 8]
-parent2 = [4, 1, 2, 8, 7, 6, 5, 3]
+def fitnessbin(binFilledcapacity: int):
+    return (binFilledcapacity/binSize)**4
 
-offspring1, offspring2 = ox_crossover(parent1, parent2)
-print("Parent 1:", parent1)
-print("Parent 2:", parent2)
-print("Offspring 1:", offspring1)
-print("Offspring 2:", offspring2)
+            
 
+                    #######initialization######
+                    
+
+def initialize(itemsindex:list, items:object):
+    population = []
+    for _ in range(populationsize):
+        random.shuffle(itemsindex)
+        fitness, bins = bin_count(itemsindex, items)
+        population.append({'genotype': itemsindex[:],  'fitness': fitness,'bincount': bins})
+    return sorted(population, key=lambda geno: -geno['fitness'])
+
+                                                        #######parents selection####
+
+def rouletselection(poluation: list):
+    fitness_sum= sum(p['fitness'] for p in poluation)
+    index = random.random() * fitness_sum
+    
+    fitness =0 
+    for genotype in population:
+        fitness += genotype['fitness']
+        if (fitness > index):
+            return genotype
+
+
+                                                    #######mutation selection####
+
+def insert_mutation(child: list):
+    if (random.random() > mutationProbability):
+        return child
+    randomindex = random.sample(range(len(child)), 2)
+    gen2 = child[randomindex[1]]
+    child.remove(gen2)
+    child.insert(randomindex[0], gen2)
+    
+    return child
+
+
+def inversion_mutation(child: list):
+    if (random.random() > mutationProbability):
+        return child
+    
+    randomindex = random.sample(range(len(child)), 2)
+    randomindex.sort()
+    
+    rep1 = child[: randomindex[0]]
+    rep2 = child[randomindex[0]: randomindex[1]+1]
+    rep2.reverse()
+    rep3 = child[randomindex[1]+1:]
+    
+    child = rep1 + rep2 + rep3
+    
+    return child
+
+def swap_mutation(child: list):
+    if (random.random() > mutationProbability):
+        return child
+    
+    randomindex = random.sample(range(len(child)), 2)
+    rep1 = child[randomindex[0]]
+    rep2 = child[randomindex[1]]
+    child[randomindex[0]] = rep2
+    child[randomindex[1]] = rep1
+    
+    return child
+
+                                                ######crossover###########
+                                                
+                      
+                                                
+def ox_crossover(parents1, parents2):
+    if (random.random() > crossoverProbability):
+        return parents1, parents2
+    
+    point1 = random.randint(0, instancelen - 2)
+    point2 = random.randint(point1 +1, instancelen - 1)
+    
+    child1 = [None]*instancelen
+    child2 = [None]*instancelen
+    
+    child1[point1: point2] = parents1[point1: point2]
+    child2[point1: point2] = parents2[point1: point2]
+    
+    child1_index = point2
+    child2_index = point2
+    
+    for i in range(instancelen):
+        index = i+point2
+        if (index >= instancelen):
+            index -= instancelen
+            
+        if (parents2[index] not in child1):
+            child1[child1_index] = parents2[index]
+            child1_index += 1
+            if (child1_index >= instancelen):
+                child1_index -= instancelen
+                
+        if (parents1[index] not in child2):
+            child2[child2_index] = parents1[index]
+            child2_index += 1
+            if (child2_index >= instancelen):
+                child2_index -= instancelen
+                
+    return child1, child2
+
+def caf_crossover(parents1, parents2):                  #cut and fill crossover
+    if (random.random() > crossoverProbability):
+        return [parents1, parents2]
+    
+    point = random.randint(1, instancelen -1)
+    child1 = parents1[0:point]
+    child2 = parents2[0:point]
+    
+    for i in range(len(parents1)):
+        index = i + point
+        
+        if (index >= instancelen):
+            index -= instancelen
+        if parents1[index] not in child2:
+            child2.append(parents1[index])
+        if parents2[index] not in child1:
+            child1.append(parents2[index])
+    
+    return child1, child2
+ 
+   
+                                                    ##### elitism ####
+
+
+def elitism(population, childs):
+    for geno in population:
+        if(childs['fitness'] >= geno['fitness']):
+            population[population.index(geno)] = childs
+        break
+    return sorted(population, key=lambda geno: geno['fitness'])
+
+                                                    ####### main ######
+            
+round = 0
+
+instancelen, binSize, items, itemsindex = readInstances("./instance_sets/1.txt")
+population = initialize(itemsindex, items)
+
+generationsfitness = []
+generationsbins = []
+while round < maxRounds:
+                        ####parents selections #####
+    generationsfitness.append([i['fitness'] for i in population])
+    # generationsbins.append([i['bin_count'] for i in population])
+    
+    #roulet selections 
+    parents1 = rouletselection(population)
+    parents2 = rouletselection(population)
+    
+    
+                        #### crossover####
+    
+    #ox crosover
+    child1, child2 = ox_crossover(parents1['genotype'], parents2['genotype'])
+    
+    #cut and fill crossover
+    # child1, child2 = caf_crossover(parents1['genotype'], parents2['genotype'])
+    
+                        ##### mutation####
+            
+
+    #insert mutation
+    # mutatedchild1 = insert_mutation(child1)
+    # mutatedchild2 = insert_mutation(child2)
+    
+    #inversion mutation
+    # mutatedchild1 = inversion_mutation(child1)
+    # mutatedchild2 = inversion_mutation(child2)
+     
+    #swap mutation
+    mutatedchild1 = swap_mutation(child1)
+    mutatedchild2 = swap_mutation(child2)
+    
+    #check fitness
+    fitness1, bins1 = bin_count(child1, items)
+    fitness2, bins2 = bin_count(child2, items)
+    
+    #elitism
+    population = elitism(population, {'genotype': mutatedchild1, 'fitness': fitness1,'bin_count': bins1})
+    population = elitism(population, {'genotype': mutatedchild2, 'fitness': fitness2,'bin_count': bins2})
+    
+    round +=1
+    
+print(population)
+   
