@@ -8,13 +8,13 @@ import matplotlib.pyplot as plt
 
 
 populationsize = 50
-maxRounds = 5000
+maxRounds = 100
 crossoverProbability = 0.8
 mutationProbability = 0.05
 
 
 
-########################## Read Data####################
+                                        ##########################   Read Data    ####################
 
 
 def readInstances(instanceFile: str):
@@ -29,7 +29,7 @@ def readInstances(instanceFile: str):
 
     return instancelen, binSize, items, itemsindex
 
-                ############fitnes###########
+                                                ############    bins count  ###########
                 
 def bin_count(itemsindex: list, items: object):
     bins = 1
@@ -49,12 +49,14 @@ def bin_count(itemsindex: list, items: object):
         
     return fitness, bins
 
+                                                     #   fitnes #
+
 def fitnessbin(binFilledcapacity: int):
     return (binFilledcapacity/binSize)**4
 
             
 
-                    #######initialization######
+                                                    ####### initialization  ######
                     
 
 def initialize(itemsindex:list, items:object):
@@ -65,7 +67,9 @@ def initialize(itemsindex:list, items:object):
         population.append({'genotype': itemsindex[:],  'fitness': fitness,'bin_count': bins})
     return sorted(population, key=lambda geno: -geno['fitness'])
 
-                                                        #######parents selection####
+                                                        #######     parents selection       ####
+
+                                                        #   roulette selection  #
 
 def rouletselection(poluation: list):
     fitness_sum= sum(p['fitness'] for p in poluation)
@@ -78,7 +82,9 @@ def rouletselection(poluation: list):
             return genotype
 
 
-                                                    #######mutation selection####
+                                                    #######     mutation selection  ####
+
+                                                    #   insert mutation     #
 
 def insert_mutation(child: list):
     if (random.random() > mutationProbability):
@@ -90,7 +96,8 @@ def insert_mutation(child: list):
     
     return child
 
-
+                                                    #   inversion mutation  #
+                                            
 def inversion_mutation(child: list):
     if (random.random() > mutationProbability):
         return child
@@ -107,6 +114,8 @@ def inversion_mutation(child: list):
     
     return child
 
+                                                    #   swap mutation   #
+
 def swap_mutation(child: list):
     if (random.random() > mutationProbability):
         return child
@@ -119,10 +128,11 @@ def swap_mutation(child: list):
     
     return child
 
-                                                ######crossover###########
+                                                    ######      crossover       ###########
                                                 
                       
-                                                
+                                                    ##      1 order crossover (ox)      ###
+                                                                                                    
 def ox_crossover(parents1, parents2):
     if (random.random() > crossoverProbability):
         return parents1, parents2
@@ -158,7 +168,7 @@ def ox_crossover(parents1, parents2):
                 
     return child1, child2
 
-def caf_crossover(parents1, parents2):                  #cut and fill crossover
+def caf_crossover(parents1, parents2):                  #   cut and fill crossover
     if (random.random() > crossoverProbability):
         return [parents1, parents2]
     
@@ -179,7 +189,7 @@ def caf_crossover(parents1, parents2):                  #cut and fill crossover
     return child1, child2
  
    
-                                                    ##### elitism ####
+                                                         #####    elitism ####
 
 
 def elitism(population, childs):
@@ -189,7 +199,7 @@ def elitism(population, childs):
         break
     return sorted(population, key=lambda geno: geno['fitness'])
 
-                                                    ####### main ######
+                                                        ####### main ######
             
 round = 0
 
@@ -199,7 +209,8 @@ population = initialize(itemsindex, items)
 generationsfitness = []
 generationsbins = []
 while round < maxRounds:
-                        ####parents selections #####
+                                                        ####parents selections #####
+                                                    
     generationsfitness.append([i['fitness'] for i in population])
     generationsbins.append([i['bin_count'] for i in population])
     
@@ -208,7 +219,7 @@ while round < maxRounds:
     parents2 = rouletselection(population)
     
     
-                        #### crossover####
+                                                         #### crossover####
     
     #ox crosover
     child1, child2 = ox_crossover(parents1['genotype'], parents2['genotype'])
@@ -216,7 +227,7 @@ while round < maxRounds:
     #cut and fill crossover
     # child1, child2 = caf_crossover(parents1['genotype'], parents2['genotype'])
     
-                        ##### mutation####
+                                                         #####    mutation  ####
             
 
     #insert mutation
@@ -244,11 +255,13 @@ while round < maxRounds:
 # print(population)
 # print (items)
 
+
+                                                        ####bins count for plotting###
+
 bins_counts = []
 for chromosome in population:
     bins_counts.append(chromosome['bin_count'])
-    
-    
+     
 plt.figure(figsize=(10, 6))
 plt.hist(bins_counts, color='skyblue', align='mid')
 plt.title('Frequency of Bin Counts in Population')
@@ -256,6 +269,9 @@ plt.xlabel('Number of Bins')
 plt.ylabel('Frequency')
 plt.grid(axis='y', linestyle='--', alpha=0.7)
 plt.show()
+
+
+                                                         #print result text file######
 
 def result(items: object, ind: object, binSize: int, name: str):
     def printList(l: list):
@@ -281,6 +297,9 @@ def result(items: object, ind: object, binSize: int, name: str):
         file.write(f"{x}\n")
         
 # result(items, population[0], 10000, 'instance5.txt')
+
+
+                                                            ####max mean fitness function fo rplot
 
 def max_mean_fitness(generationsfitness: list, generationCount: int, title: str ):
     maxFitness = []
@@ -308,9 +327,10 @@ def max_mean_fitness(generationsfitness: list, generationCount: int, title: str 
 
     plt.show()
 
-# max_mean_fitness(generationsfitness, 5000, 'fitness_cut and fill_crossover-swap mutation')
+max_mean_fitness(generationsfitness, 100, 'fitness_cut and fill_crossover-swap mutation')
 
-
+                                                            #####max mean function for plot
+                            
 def max_mean_bins(generationsbins: list, generationCount: int, title: str):
     minBin = []
     meanBin = []
