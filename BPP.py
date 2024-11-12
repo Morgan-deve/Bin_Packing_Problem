@@ -1,5 +1,7 @@
-import numpy as np
+from numpy import average
 import random
+import matplotlib.pyplot as plt
+
 
 
 
@@ -60,7 +62,7 @@ def initialize(itemsindex:list, items:object):
     for _ in range(populationsize):
         random.shuffle(itemsindex)
         fitness, bins = bin_count(itemsindex, items)
-        population.append({'genotype': itemsindex[:],  'fitness': fitness,'bincount': bins})
+        population.append({'genotype': itemsindex[:],  'fitness': fitness,'bin_count': bins})
     return sorted(population, key=lambda geno: -geno['fitness'])
 
                                                         #######parents selection####
@@ -191,7 +193,7 @@ def elitism(population, childs):
             
 round = 0
 
-instancelen, binSize, items, itemsindex = readInstances("./instance_sets/1.txt")
+instancelen, binSize, items, itemsindex = readInstances("./instance_sets/5.txt")
 population = initialize(itemsindex, items)
 
 generationsfitness = []
@@ -199,7 +201,7 @@ generationsbins = []
 while round < maxRounds:
                         ####parents selections #####
     generationsfitness.append([i['fitness'] for i in population])
-    # generationsbins.append([i['bin_count'] for i in population])
+    generationsbins.append([i['bin_count'] for i in population])
     
     #roulet selections 
     parents1 = rouletselection(population)
@@ -239,5 +241,102 @@ while round < maxRounds:
     
     round +=1
     
-print(population)
-   
+# print(population)
+# print (items)
+
+bins_counts = []
+for chromosome in population:
+    bins_counts.append(chromosome['bin_count'])
+    
+    
+plt.figure(figsize=(10, 6))
+plt.hist(bins_counts, color='skyblue', align='mid')
+plt.title('Frequency of Bin Counts in Population')
+plt.xlabel('Number of Bins')
+plt.ylabel('Frequency')
+plt.grid(axis='y', linestyle='--', alpha=0.7)
+plt.show()
+
+def result(items: object, ind: object, binSize: int, name: str):
+    def printList(l: list):
+        return " ".join(map(str, l))
+    
+    bincount = ind["bin_count"]
+     
+    with open(name, 'w') as file:
+        file.write(f"{bincount}\n")
+        itemList = []
+        bin_capacity = 0
+        for item in ind["genotype"]:
+            if ( bin_capacity + items[item] <= binSize):
+                itemList.append(item +1)
+                bin_capacity += items[item]
+            else:
+                x = printList(itemList)
+                file.write(f"{x}\n")
+                itemList = [item +1]
+                bin_capacity = items[item]
+                
+        x = printList(itemList)
+        file.write(f"{x}\n")
+        
+# result(items, population[0], 10000, 'instance5.txt')
+
+def max_mean_fitness(generationsfitness: list, generationCount: int, title: str ):
+    maxFitness = []
+    meanFitness = []
+    plt.figure()
+    allGen = []
+    for i in range(generationCount):
+        allGen.append(i)
+
+    for fitnessList in generationsfitness:
+        maxFitness.append(max(fitnessList))
+        meanFitness.append(average(fitnessList))
+
+    plt.plot(allGen, meanFitness, label='Average Fitness',
+             color='r', linestyle='dashed')
+    plt.plot(allGen, maxFitness, label='Best Fitness', color='b')
+
+    plt.xlabel('Generation')
+    plt.ylabel('Fitness')
+
+    plt.title(f'Fitness Generations :\n {title}')
+
+    plt.legend()
+    plt.grid()
+
+    plt.show()
+
+# max_mean_fitness(generationsfitness, 5000, 'fitness_cut and fill_crossover-swap mutation')
+
+
+def max_mean_bins(generationsbins: list, generationCount: int, title: str):
+    minBin = []
+    meanBin = []
+    plt.figure()
+    allGen = []
+    for i in range(generationCount):
+        allGen.append(i)
+
+    for binsList in generationsbins:
+        minBin.append(min(binsList))
+        meanBin.append(average(binsList))
+
+    plt.plot(allGen, meanBin, label='Average Bins',
+             color='r', linestyle='dashed')
+    plt.plot(allGen, minBin, label='Best Bins', color='b')
+
+    plt.xlabel('Generation')
+    plt.ylabel('Bins')
+
+    plt.title(f'Bins Generations :\n {title}')
+
+    plt.legend()
+    plt.grid()
+
+    plt.show()
+    
+    
+# max_mean_bins(generationsbins, 5000, 'bins_cut and fill_crossover-swap mutation' )
+
